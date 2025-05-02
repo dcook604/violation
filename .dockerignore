@@ -1,0 +1,89 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Database files (for development)
+*.db
+*.sql
+*.sqlite
+
+# Local configuration
+.env*
+!.env.docker.example
+
+# Logs
+*.log
+logs/
+log/
+
+# User uploads and generated files (for development)
+uploads/*
+saved_files/*
+pdf_violations/*
+html_violations/*
+
+# Node.js
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Git related
+.git/
+.gitignore
+.github/
+.gitattributes
+
+# Docker related
+.dockerignore
+docker-compose*
+Dockerfile*
+
+# Test related
+.pytest_cache/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Others
+*.md
+!README.md
+!DOCKER_README.md
+LICENSE 

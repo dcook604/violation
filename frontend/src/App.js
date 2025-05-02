@@ -20,7 +20,9 @@ function NewViolationPage() {
     try {
       const response = await API.post('/api/violations', values);
       // Navigate to the newly created violation after successful submission
-      if (response.data && response.data.id) {
+      if (response.data && response.data.public_id) {
+        navigate(`/violations/public/${response.data.public_id}`);
+      } else if (response.data && response.data.id) {
         navigate(`/violations/${response.data.id}`);
       } else {
         navigate('/violations');
@@ -75,6 +77,13 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <ViolationDetail />
+              </Layout>
+            </PrivateRoute>
+          } />
+          <Route path="/violations/public/:publicId" element={
+            <PrivateRoute>
+              <Layout>
+                <ViolationDetail usePublicId={true} />
               </Layout>
             </PrivateRoute>
           } />

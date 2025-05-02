@@ -1,0 +1,63 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for WeasyPrint and ClamAV
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    python3-setuptools \
+    python3-wheel \
+    python3-cffi \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    libclamav-dev \
+    clamav-daemon \
+    clamav-freshclam \
+    && rm -rf /var/lib/apt/lists/*
+
+# Start ClamAV services
+RUN freshclam && \
+    service clamav-daemon start
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+COPY requirements-dev.txt ./requirements-dev.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Copy the rest of the application
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p uploads saved_files/html saved_files/pdf saved_files/uploads/fields
+RUN mkdir -p instance
+
+# Make sure the app has permission to write to these directories
+RUN chmod -R 777 uploads saved_files instance
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=run.py
+ENV FLASK_DEBUG=1
+
+# Expose port
+EXPOSE 5004
+
+# Use entrypoint script for initialization
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Command to run the application
+CMD ["python", "run.py"] 

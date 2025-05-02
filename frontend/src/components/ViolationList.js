@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
+import { Link } from 'react-router-dom';
 
 export default function ViolationList() {
   const [violations, setViolations] = useState([]);
@@ -68,39 +69,49 @@ export default function ViolationList() {
     )
   ).slice(0, 3); // Limit to first 3 dynamic fields to save space
 
+  // Update links to use public_id
+  const generateLink = (violation) => {
+    if (violation.public_id) {
+      return `/violations/public/${violation.public_id}`;
+    }
+    return `/violations/${violation.id}`;
+  };
+
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">Violations</h2>
       
       {/* Filters and Controls */}
-      <div className="flex flex-wrap gap-4 mb-4 items-center">
-        <div className="flex items-center">
-          <label htmlFor="dateFilter" className="mr-2 text-sm font-medium">Date Filter:</label>
-          <select
-            id="dateFilter"
-            value={dateFilter}
-            onChange={(e) => handleDateFilterChange(e.target.value)}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            <option value="">All Time</option>
-            <option value="last7days">Last 7 Days</option>
-            <option value="last30days">Last 30 Days</option>
-          </select>
-        </div>
-        
-        <div className="flex items-center">
-          <label htmlFor="perPage" className="mr-2 text-sm font-medium">Show:</label>
-          <select
-            id="perPage"
-            value={perPage}
-            onChange={handlePerPageChange}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-          </select>
+      <div className="flex flex-wrap justify-between mb-4 items-center">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center">
+            <label htmlFor="dateFilter" className="mr-2 text-sm font-medium">Date Filter:</label>
+            <select
+              id="dateFilter"
+              value={dateFilter}
+              onChange={(e) => handleDateFilterChange(e.target.value)}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value="">All Time</option>
+              <option value="last7days">Last 7 Days</option>
+              <option value="last30days">Last 30 Days</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center ml-4">
+            <label htmlFor="perPage" className="mr-2 text-sm font-medium">Show:</label>
+            <select
+              id="perPage"
+              value={perPage}
+              onChange={handlePerPageChange}
+              className="border rounded px-2 py-1 text-sm bg-blue-100 font-bold"
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
         </div>
         
         <div className="text-sm text-gray-500">
@@ -126,7 +137,11 @@ export default function ViolationList() {
           <tbody className="bg-white divide-y divide-gray-200">
             {violations.map(v => (
               <tr key={v.id} className="hover:bg-gray-50">
-                <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{v.reference}</td>
+                <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <Link to={generateLink(v)} className="text-blue-600 hover:underline">
+                    {v.reference}
+                  </Link>
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{v.dynamic_fields?.Category || v.category}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{v.building}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
@@ -136,7 +151,6 @@ export default function ViolationList() {
                   <td key={name} className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{v.dynamic_fields?.[name] || ''}</td>
                 ))}
                 <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
-                  <a href={`/violations/${v.id}`} className="text-blue-600 hover:underline mr-2">View</a>
                   {v.html_path && 
                     <a href={v.html_path} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline mr-2">HTML</a>
                   }

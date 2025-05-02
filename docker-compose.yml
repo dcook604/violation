@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5004:5004"
+    environment:
+      - SECRET_KEY=docker-testing-secret-key
+      - DATABASE_URL=sqlite:////app/instance/app.db
+      - FLASK_APP=run.py
+      - FLASK_DEBUG=1
+      - BASE_URL=http://localhost:5004
+      - ADMIN_EMAIL=admin@example.com
+      - ADMIN_PASSWORD=Admin123!
+      - MAIL_SERVER=localhost
+      - MAIL_PORT=25
+      - MAIL_DEFAULT_SENDER=noreply@example.com
+      - UPLOAD_FOLDER=/app/uploads
+    volumes:
+      - ./app:/app/app  # For development hot-reload
+      - ./instance:/app/instance  # For SQLite database persistence
+      - sqlite_data:/app/instance
+      - uploads_data:/app/uploads
+      - saved_files_data:/app/saved_files
+    depends_on:
+      - clamav
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004/api/auth/session"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3001:3001"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5004
+    volumes:
+      - ./frontend/src:/app/src  # For development hot-reload
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Use this for MariaDB instead of SQLite if needed
+  # db:
+  #   image: mariadb:10.6
+  #   environment:
+  #     - MYSQL_ROOT_PASSWORD=rootpassword
+  #     - MYSQL_DATABASE=violation
+  #     - MYSQL_USER=violation
+  #     - MYSQL_PASSWORD=violation
+  #   volumes:
+  #     - mariadb_data:/var/lib/mysql
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s
+
+  clamav:
+    image: clamav/clamav:latest
+    volumes:
+      - clamav_data:/var/lib/clamav
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  sqlite_data:
+  uploads_data:
+  saved_files_data:
+  clamav_data:
+  # mariadb_data:  # Uncomment if using MariaDB 

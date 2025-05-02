@@ -188,6 +188,7 @@ def api_create_violation():
         
         return jsonify({
             'id': violation.id,
+            'public_id': violation.public_id,
             'message': 'Violation created successfully',
             'processed_fields': processed_fields
         }), 201
@@ -469,9 +470,9 @@ def api_list_violations():
         
         # Base SQL query
         if current_user.is_admin:
-            sql = "SELECT id, reference, category, building, unit_number, created_at, created_by, subject, details, html_path, pdf_path FROM violations"
+            sql = "SELECT id, public_id, reference, category, building, unit_number, created_at, created_by, subject, details, html_path, pdf_path FROM violations"
         else:
-            sql = "SELECT id, reference, category, building, unit_number, created_at, created_by, subject, details, html_path, pdf_path FROM violations WHERE created_by = :user_id"
+            sql = "SELECT id, public_id, reference, category, building, unit_number, created_at, created_by, subject, details, html_path, pdf_path FROM violations WHERE created_by = :user_id"
         
         # Add date filter conditions if specified
         params = {"user_id": current_user.id}
@@ -493,7 +494,7 @@ def api_list_violations():
                 params["start_date"] = thirty_days_ago
         
         # Add total count query
-        count_sql = sql.replace("SELECT id, reference, category, building, unit_number, created_at, created_by, subject, details, html_path, pdf_path", "SELECT COUNT(*) as total")
+        count_sql = sql.replace("SELECT id, public_id, reference, category, building, unit_number, created_at, created_by, subject, details, html_path, pdf_path", "SELECT COUNT(*) as total")
         
         # Add ordering and pagination to main query
         sql += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
@@ -526,6 +527,7 @@ def api_list_violations():
                 
             violation = {
                 'id': row.id,
+                'public_id': row.public_id or '',
                 'reference': row.reference or '',
                 'category': row.category or '',
                 'building': row.building or '',
@@ -536,6 +538,8 @@ def api_list_violations():
                 'details': row.details or '',
                 'html_path': f"/violations/view/{row.id}" if row.html_path else None,
                 'pdf_path': f"/violations/pdf/{row.id}" if row.pdf_path else None,
+                'html_path_public_id': f"/violations/view/by-public-id/{row.public_id}" if row.html_path and row.public_id else None,
+                'pdf_path_public_id': f"/violations/pdf/by-public-id/{row.public_id}" if row.pdf_path and row.public_id else None,
                 'dynamic_fields': {}
             }
             
@@ -630,6 +634,7 @@ def api_violation_detail(vid):
             
     result = {
         'id': v.id,
+        'public_id': v.public_id,
         'reference': v.reference,
         'category': v.category,
         'building': v.building,
@@ -1029,3 +1034,174 @@ def send_secure_urls(violation):
         'pdf_url': pdf_url,
         'token': token
     }
+
+@violation_bp.route('/violations/view/by-public-id/<public_id>')
+def view_violation_html_by_public_id(public_id):
+    """Public route to view a violation in HTML format using public_id"""
+    violation = Violation.query.filter_by(public_id=public_id).first_or_404()
+    
+    # Check if an HTML file already exists
+    if not violation.html_path:
+        try:
+            # Generate a new HTML file if it doesn't exist
+            html_path, _ = create_violation_html(violation)
+            if not html_path:
+                abort(500)  # Internal Server Error
+        except Exception as e:
+            current_app.logger.error(f"Error generating HTML for violation {violation.id}: {str(e)}")
+            abort(500)  # Internal Server Error
+    else:
+        # Get the directory and filename
+        html_full_path = os.path.join(current_app.config['BASE_DIR'], violation.html_path)
+        if not os.path.exists(html_full_path):
+            try:
+                # Re-generate if the file doesn't exist at the stored path
+                html_path, _ = create_violation_html(violation)
+                if not html_path:
+                    abort(500)  # Internal Server Error
+            except Exception as e:
+                current_app.logger.error(f"Error regenerating HTML for violation {violation.id}: {str(e)}")
+                abort(500)  # Internal Server Error
+    
+    # Get the directory and filename from the path
+    html_dir = os.path.dirname(os.path.join(current_app.config['BASE_DIR'], violation.html_path))
+    html_filename = os.path.basename(violation.html_path)
+    
+    # Serve the file
+    return send_from_directory(html_dir, html_filename)
+
+@violation_bp.route('/violations/pdf/by-public-id/<public_id>')
+@login_required
+def download_violation_pdf_by_public_id(public_id):
+    """Download a violation PDF using public_id - requires authentication"""
+    violation = Violation.query.filter_by(public_id=public_id).first_or_404()
+    
+    # Check if the user has permission to view this violation
+    if not (current_user.is_admin or violation.created_by == current_user.id):
+        return jsonify({'error': 'Forbidden'}), 403
+    
+    # Check if a PDF file already exists
+    if not violation.pdf_path:
+        try:
+            # Generate the HTML first if needed
+            if not violation.html_path:
+                html_path, html_content = create_violation_html(violation)
+            else:
+                # Read the existing HTML content
+                html_full_path = os.path.join(current_app.config['BASE_DIR'], violation.html_path)
+                if os.path.exists(html_full_path):
+                    with open(html_full_path, 'r', encoding='utf-8') as f:
+                        html_content = f.read()
+                else:
+                    # Re-generate HTML if file is missing
+                    html_path, html_content = create_violation_html(violation)
+            
+            # Generate the PDF using the HTML content
+            pdf_path = generate_violation_pdf(violation, html_content)
+            if not pdf_path:
+                abort(500)  # Internal Server Error
+        except Exception as e:
+            current_app.logger.error(f"Error generating PDF for violation {violation.id}: {str(e)}")
+            abort(500)  # Internal Server Error
+    else:
+        # Check if the file exists at the stored path
+        pdf_full_path = os.path.join(current_app.config['BASE_DIR'], violation.pdf_path)
+        if not os.path.exists(pdf_full_path):
+            try:
+                # Re-generate if the file doesn't exist
+                if not violation.html_path:
+                    html_path, html_content = create_violation_html(violation)
+                else:
+                    # Read the existing HTML content
+                    html_full_path = os.path.join(current_app.config['BASE_DIR'], violation.html_path)
+                    if os.path.exists(html_full_path):
+                        with open(html_full_path, 'r', encoding='utf-8') as f:
+                            html_content = f.read()
+                    else:
+                        # Re-generate HTML if file is missing
+                        html_path, html_content = create_violation_html(violation)
+                
+                # Generate the PDF using the HTML content
+                pdf_path = generate_violation_pdf(violation, html_content)
+                if not pdf_path:
+                    abort(500)  # Internal Server Error
+            except Exception as e:
+                current_app.logger.error(f"Error regenerating PDF for violation {violation.id}: {str(e)}")
+                abort(500)  # Internal Server Error
+    
+    # Get the directory and filename from the path
+    pdf_dir = os.path.dirname(os.path.join(current_app.config['BASE_DIR'], violation.pdf_path))
+    pdf_filename = os.path.basename(violation.pdf_path)
+    
+    # Serve the file
+    return send_from_directory(
+        pdf_dir,
+        pdf_filename,
+        as_attachment=True,
+        download_name=f"violation_{violation.reference}.pdf"
+    )
+
+@violation_bp.route('/api/violations/by-public-id/<public_id>', methods=['GET'])
+@login_required
+def api_violation_detail_by_public_id(public_id):
+    """API endpoint to get violation details by public_id"""
+    v = Violation.query.filter_by(public_id=public_id).first_or_404()
+    if not (current_user.is_admin or v.created_by == current_user.id):
+        return jsonify({'error': 'Forbidden'}), 403
+    field_values = ViolationFieldValue.query.filter_by(violation_id=v.id).all()
+    dynamic_fields = {}
+    for fv in field_values:
+        field = FieldDefinition.query.get(fv.field_definition_id)
+        if field:
+            dynamic_fields[field.name] = fv.value
+    
+    # Get creator email
+    from .models import User
+    creator_email = None
+    if v.created_by:
+        creator = User.query.get(v.created_by)
+        if creator:
+            creator_email = creator.email
+            
+    # Safely handle created_at which might be a string or datetime
+    created_at = None
+    try:
+        if hasattr(v, 'created_at'):
+            if isinstance(v.created_at, str):
+                created_at = v.created_at
+            elif v.created_at:
+                created_at = v.created_at.isoformat()
+    except Exception as err:
+        current_app.logger.warning(f"Error formatting created_at for violation {v.id}: {str(err)}")
+        created_at = str(v.created_at) if hasattr(v, 'created_at') and v.created_at else None
+            
+    # Safely handle incident_date which might be a string or datetime
+    incident_date = None
+    try:
+        if v.incident_date:
+            if isinstance(v.incident_date, str):
+                incident_date = v.incident_date
+            else:
+                incident_date = v.incident_date.isoformat()
+    except Exception as err:
+        current_app.logger.warning(f"Error formatting incident_date for violation {v.id}: {str(err)}")
+        incident_date = str(v.incident_date) if v.incident_date else None
+            
+    result = {
+        'id': v.id,
+        'public_id': v.public_id,
+        'reference': v.reference,
+        'category': v.category,
+        'building': v.building,
+        'unit_number': v.unit_number,
+        'incident_date': incident_date,
+        'subject': v.subject,
+        'details': v.details,
+        'created_at': created_at,
+        'created_by': v.created_by,
+        'created_by_email': creator_email,
+        'dynamic_fields': dynamic_fields,
+        'html_path': f"/violations/view/by-public-id/{v.public_id}" if hasattr(v, 'html_path') and v.html_path else None,
+        'pdf_path': f"/violations/pdf/by-public-id/{v.public_id}" if hasattr(v, 'pdf_path') and v.pdf_path else None
+    }
+    return jsonify(result)

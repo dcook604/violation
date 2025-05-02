@@ -61,7 +61,7 @@ const RecentViolationsTable = ({ violations }) => (
           {violations.map((violation) => (
             <tr key={violation.id}>
               <td className="border-t-0 px-6 align-middle border-l-0 border-r-0 text-xs whitespace-nowrap p-4">
-                <a href={`/violations/${violation.id}`} className="text-blue-600 hover:underline">
+                <a href={violation.public_id ? `/violations/public/${violation.public_id}` : `/violations/${violation.id}`} className="text-blue-600 hover:underline">
                   {violation.reference}
                 </a>
               </td>
@@ -79,29 +79,52 @@ const RecentViolationsTable = ({ violations }) => (
               </td>
               <td className="border-t-0 px-6 align-middle border-l-0 border-r-0 text-xs whitespace-nowrap p-4">
                 <div className="flex space-x-3">
-                {violation.html_path && (
-                  <a 
-                    href={`http://172.16.16.6:5004${violation.html_path}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                {violation.public_id ? (
+                  <>
+                    <a 
+                      href={`/violations/view/by-public-id/${violation.public_id}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
                       className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium hover:bg-green-200"
-                  >
-                    HTML
-                  </a>
-                )}
-                {violation.pdf_path && (
-                  <a 
-                    href={`http://172.16.16.6:5004${violation.pdf_path}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                    >
+                      HTML
+                    </a>
+                    <a 
+                      href={`/violations/pdf/by-public-id/${violation.public_id}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
                       className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium hover:bg-red-200"
-                  >
-                    PDF
-                  </a>
+                    >
+                      PDF
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    {violation.html_path && (
+                      <a 
+                        href={`/violations/view/${violation.id}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium hover:bg-green-200"
+                      >
+                        HTML
+                      </a>
+                    )}
+                    {violation.pdf_path && (
+                      <a 
+                        href={`/violations/pdf/${violation.id}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium hover:bg-red-200"
+                      >
+                        PDF
+                      </a>
+                    )}
+                  </>
                 )}
-                  {!violation.html_path && !violation.pdf_path && (
-                    <span className="text-gray-400">None</span>
-                  )}
+                {!violation.html_path && !violation.pdf_path && !violation.public_id && (
+                  <span className="text-gray-400">None</span>
+                )}
                 </div>
               </td>
             </tr>

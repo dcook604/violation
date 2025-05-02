@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import Button from './common/Button';
 import Input from './common/Input';
 
-export default function ViolationDetail() {
-  const { id } = useParams();
+export default function ViolationDetail({ usePublicId = false }) {
+  const { id, publicId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [violation, setViolation] = useState(null);
@@ -20,6 +20,16 @@ export default function ViolationDetail() {
   const [replies, setReplies] = useState([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
 
+  // Determine which ID to use and which API endpoint
+  const violationIdentifier = usePublicId ? publicId : id;
+  const apiEndpoint = usePublicId 
+    ? `/api/violations/by-public-id/${publicId}`
+    : `/api/violations/${id}`;
+  
+  const repliesEndpoint = usePublicId
+    ? `/api/violations/${violation?.id}/replies` // Need to use numeric ID for replies after we know it
+    : `/api/violations/${id}/replies`;
+
   useEffect(() => {
     // Fetch field definitions to know field types
     API.get('/api/fields')
@@ -30,7 +40,7 @@ export default function ViolationDetail() {
         console.error('Failed to load field definitions', err);
       });
 
-    API.get(`/api/violations/${id}`)
+    API.get(apiEndpoint)
       .then(res => {
         setViolation(res.data);
         setForm({
@@ -39,8 +49,10 @@ export default function ViolationDetail() {
         });
         setLoading(false);
         
-        // After loading the violation, fetch replies
-        fetchReplies();
+        // After loading the violation, fetch replies if we have the ID
+        if (res.data && res.data.id) {
+          fetchReplies(res.data.id);
+        }
       })
       .catch(err => {
         if (err.response && err.response.status === 403) {
@@ -50,11 +62,12 @@ export default function ViolationDetail() {
         }
         setLoading(false);
       });
-  }, [id]);
+  }, [apiEndpoint]);
   
-  const fetchReplies = () => {
+  const fetchReplies = (violationId) => {
     setLoadingReplies(true);
-    API.get(`/api/violations/${id}/replies`)
+    // Always use the numeric ID for fetching replies
+    API.get(`/api/violations/${violationId}/replies`)
       .then(res => {
         setReplies(res.data);
         setLoadingReplies(false);
@@ -82,13 +95,14 @@ export default function ViolationDetail() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await API.put(`/api/violations/${id}`, {
+      // Always use the numeric ID for saving
+      await API.put(`/api/violations/${violation.id}`, {
         ...form,
         dynamic_fields: form.dynamic_fields
       });
       setEditing(false);
-      // Refresh
-      const res = await API.get(`/api/violations/${id}`);
+      // Refresh using the same endpoint we loaded from
+      const res = await API.get(apiEndpoint);
       setViolation(res.data);
       setForm({ ...res.data, dynamic_fields: { ...res.data.dynamic_fields } });
     } catch (err) {
@@ -101,7 +115,8 @@ export default function ViolationDetail() {
     if (!window.confirm('Are you sure you want to delete this violation?')) return;
     setDeleting(true);
     try {
-      await API.delete(`/api/violations/${id}`);
+      // Always use the numeric ID for deletion
+      await API.delete(`/api/violations/${violation.id}`);
       navigate('/violations');
     } catch (err) {
       setError('Failed to delete violation.');
@@ -109,12 +124,19 @@ export default function ViolationDetail() {
     setDeleting(false);
   };
 
+  // Use public_id paths if available, otherwise fallback to numeric ID
   const handleViewHtml = () => {
-    window.open(`${API.defaults.baseURL}/violations/view/${id}`, '_blank');
+    const path = violation.html_path_public_id || violation.html_path;
+    if (path) {
+      window.open(`${API.defaults.baseURL}${path}`, '_blank');
+    }
   };
 
   const handleDownloadPdf = () => {
-    window.open(`${API.defaults.baseURL}/violations/pdf/${id}`, '_blank');
+    const path = violation.pdf_path_public_id || violation.pdf_path;
+    if (path) {
+      window.open(`${API.defaults.baseURL}${path}`, '_blank');
+    }
   };
 
   // Function to determine if a field is a file type

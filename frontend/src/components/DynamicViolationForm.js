@@ -180,12 +180,6 @@ function DynamicViolationForm({ onSubmit, initialValues = {}, submitLabel = 'Sub
         files.map(f => `${f.name} (${Math.round(f.size/1024)} KB)`));
       
       const formData = new FormData();
-      formData.append('field_name', fieldName);
-      
-      // Clear any existing files from FormData (not strictly necessary but good practice)
-      if (formData.has('files')) {
-        formData.delete('files');
-      }
       
       // Append each file individually to the FormData
       files.forEach((file, index) => {
@@ -197,8 +191,8 @@ function DynamicViolationForm({ onSubmit, initialValues = {}, submitLabel = 'Sub
       console.log(`FormData keys: ${[...formData.keys()].join(', ')}`);
       
       try {
-        console.log(`Sending upload request to /api/violations/${violationId}/upload`);
-        const response = await API.post(`/api/violations/${violationId}/upload`, formData, {
+        console.log(`Sending upload request to /api/violations/${violationId}/upload?field=${fieldName}`);
+        const response = await API.post(`/api/violations/${violationId}/upload?field=${fieldName}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }

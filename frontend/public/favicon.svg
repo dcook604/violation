@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background (optional, transparent by default) -->
+  <rect width="64" height="64" fill="white" fill-opacity="0"/>
+  
+  <!-- Colored bars - centered and slightly larger -->
+  <rect x="12" y="16" width="8" height="32" fill="#FF5252"/>
+  <rect x="24" y="20" width="8" height="28" fill="#00B8D4"/>
+  <rect x="36" y="24" width="8" height="24" fill="#FFD600"/>
+  <rect x="48" y="28" width="8" height="20" fill="#64DD17"/>
+</svg>

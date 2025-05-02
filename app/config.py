@@ -9,7 +9,7 @@ class Config:
     # Base configuration
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'development-key-change-me'
     BASE_DIR = os.path.dirname(basedir)
-    BASE_URL = os.environ.get('BASE_URL') or 'http://localhost:5004'
+    BASE_URL = os.environ.get('BASE_URL') or 'http://172.16.16.6:5004'
     
     # Database settings
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \

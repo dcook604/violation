@@ -13,6 +13,7 @@ import logging
 from .models import Settings
 import tempfile
 from itsdangerous import URLSafeTimedSerializer
+import subprocess
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -378,36 +379,30 @@ def generate_violation_pdf(violation, html_content=None):
                 # Generate HTML if no path or file doesn't exist
                 _, html_content = create_violation_html(violation)
         
-        # Generate PDF from HTML content
+        # Write HTML to temp file for wkhtmltopdf
+        with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as temp_html:
+            temp_html.write(html_content.encode('utf-8'))
+            temp_html_path = temp_html.name
+        
         try:
-            # Method 1: Using string content directly (WeasyPrint 52+)
-            # Local import to avoid module-level dependencies
-            from weasyprint import HTML
-            HTML(string=html_content).write_pdf(file_path)
-            current_app.logger.info(f"Generated PDF using direct HTML string: {file_path}")
-        except Exception as e:
-            current_app.logger.warning(f"Direct HTML string PDF generation failed: {str(e)}")
+            # Use wkhtmltopdf to generate PDF (direct method)
+            cmd = ['/usr/bin/wkhtmltopdf', temp_html_path, file_path]
+            current_app.logger.info(f"Executing wkhtmltopdf: {' '.join(cmd)}")
             
-            try:
-                # Method 2: Using temporary file approach (more compatible)
-                with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as temp_html:
-                    temp_html.write(html_content.encode('utf-8'))
-                    temp_html_path = temp_html.name
-                
-                # Use the temporary file for PDF generation
-                from weasyprint import HTML
-                HTML(filename=temp_html_path).write_pdf(file_path)
-                
-                # Clean up temporary file
-                os.unlink(temp_html_path)
-                current_app.logger.info(f"Generated PDF using temporary file approach: {file_path}")
-            except Exception as e2:
-                current_app.logger.error(f"Temporary file PDF generation failed: {str(e2)}")
-                
-                # Method 3: Fallback to an empty PDF (just to have something)
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                current_app.logger.info(f"PDF generated successfully using wkhtmltopdf: {file_path} ({os.path.getsize(file_path)} bytes)")
+            else:
+                current_app.logger.error(f"wkhtmltopdf error: {result.stderr}")
+                # Create a minimal fallback PDF if wkhtmltopdf fails
                 with open(file_path, 'w') as f:
                     f.write("%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << >> /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 0 >>\nstream\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000010 00000 n\n0000000059 00000 n\n0000000118 00000 n\n0000000217 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n267\n%%EOF")
                 current_app.logger.warning(f"Created empty fallback PDF: {file_path}")
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_html_path):
+                os.unlink(temp_html_path)
         
         # Store the secure relative path in the database
         from . import db
@@ -462,10 +457,10 @@ def send_violation_notification(violation, html_path):
         current_app.logger.info(f"No email addresses found for notification of violation {violation.id}")
         return
     
-    # Get dynamic field values
+    # Get dynamic field values - explicitly fetch each important field
+    field_defs = get_cached_fields('all')
     field_values = ViolationFieldValue.query.filter_by(violation_id=violation.id).all()
     dynamic_fields = {}
-    field_defs = get_cached_fields('all')
     
     for fv in field_values:
         field_def = next((f for f in field_defs if f.id == fv.field_definition_id), None)
@@ -474,18 +469,42 @@ def send_violation_notification(violation, html_path):
     
     # Get the values for the email with fallbacks to static fields
     category = dynamic_fields.get('Category', violation.category) or violation.category or ''
-    details = dynamic_fields.get('Details', violation.details) or violation.details or ''
+    
+    # Special handling for incident details
+    incident_details = ""
+    # First try to get it from dynamic field called "Incident Details:"
+    if "Incident Details:" in dynamic_fields and dynamic_fields["Incident Details:"]:
+        incident_details = dynamic_fields["Incident Details:"]
+    # Then try without the colon
+    elif "Incident Details" in dynamic_fields and dynamic_fields["Incident Details"]:
+        incident_details = dynamic_fields["Incident Details"]
+    # Then try generic "Details" field
+    elif "Details" in dynamic_fields and dynamic_fields["Details"]:
+        incident_details = dynamic_fields["Details"]
+    # Fall back to violation.details
+    elif violation.details:
+        incident_details = violation.details
+    # If still empty, set a placeholder
+    if not incident_details:
+        incident_details = "[No details provided]"
+    
+    # Log the incident details for debugging
+    current_app.logger.info(f"Incident details for email: {incident_details}")
+    current_app.logger.info(f"All dynamic fields: {json.dumps(dynamic_fields)}")
     
     # Create email message
     subject = f"New Violation Report: {violation.reference}"
     
-    # Generate secure token for this violation
-    token = generate_secure_access_token(violation.id)
+    # Generate secure token for this violation with 7-day expiration
+    token = generate_secure_access_token(violation.id, expiration_hours=168)  # 7 days = 168 hours
     
     # Get base URL
     base_url = current_app.config.get('BASE_URL', f"http://{request.host if request else 'localhost:5004'}")
     
-    # Create secure URLs
+    # Create secure URLs - ensure no trailing slashes in base_url
+    if base_url.endswith('/'):
+        base_url = base_url[:-1]
+    
     view_url = f"{base_url}/violations/secure/{token}"
     
     # Create plain text message
@@ -494,10 +513,21 @@ def send_violation_notification(violation, html_path):
 Details:
 Reference: {violation.reference}
 Category: {category}
-Incident Details: {details}
+Incident Details: {incident_details}
 
+Additional Information:
+"""
+    
+    # Add the rest of the dynamic fields
+    for k, v in dynamic_fields.items():
+        if k not in ['Category', 'Incident Details', 'Incident Details:'] and v:
+            body += f"{k}: {v}\n"
+    
+    body += f"""
 You can view the full details at:
 {view_url}
+
+This link is valid for 7 days and your access will be logged for security purposes.
 """
     
     # Create HTML message
@@ -509,11 +539,17 @@ You can view the full details at:
     <ul>
         <li><strong>Reference:</strong> {violation.reference}</li>
         <li><strong>Category:</strong> {category}</li>
-        <li><strong>Incident Details:</strong> {details}</li>
+        <li><strong>Incident Details:</strong> {incident_details}</li>
+    </ul>
+    
+    <h3>Additional Information:</h3>
+    <ul>
+        {' '.join([f'<li><strong>{k}:</strong> {v}</li>' for k, v in dynamic_fields.items() 
+                 if k not in ['Category', 'Incident Details', 'Incident Details:'] and v])}
     </ul>
     
     <p>You can view the full details by <a href="{view_url}">clicking here</a>.</p>
-    <p><small>This link is valid for 24 hours and your access will be logged for security purposes.</small></p>
+    <p><small>This link is valid for 7 days and your access will be logged for security purposes.</small></p>
     """
     
     try:
@@ -638,11 +674,28 @@ def secure_handle_uploaded_file(file, violation_id, field_name, subdir='fields')
         )
         os.makedirs(secure_dir, exist_ok=True)
         
+        # Set directory permissions to allow group read/execute access for ClamAV
+        try:
+            # chmod 755 - owner can read/write/execute, group can read/execute, others can read/execute
+            # This ensures ClamAV can access the directory and files
+            os.chmod(secure_dir, 0o755)
+            current_app.logger.info(f"Set permissions on directory: {secure_dir}")
+        except Exception as e:
+            current_app.logger.warning(f"Failed to set permissions on directory {secure_dir}: {str(e)}")
+        
         # Generate full file path
         file_path = os.path.join(secure_dir, unique_filename)
         
         # Save the file temporarily for scanning
         file.save(file_path)
+        
+        # Set file permissions to allow group read access for ClamAV
+        try:
+            # chmod 644 - owner can read/write, group can read, others can read
+            os.chmod(file_path, 0o644)
+            current_app.logger.info(f"Set permissions on file: {file_path}")
+        except Exception as e:
+            current_app.logger.warning(f"Failed to set permissions on file {file_path}: {str(e)}")
         
         # Verify the file was saved successfully
         if not os.path.exists(file_path):
@@ -705,13 +758,13 @@ def generate_secure_access_token(violation_id, expiration_hours=24):
     # Generate token
     return serializer.dumps(payload)
 
-def validate_secure_access_token(token, max_age=86400):
+def validate_secure_access_token(token, max_age=604800):  # 7 days = 604800 seconds
     """
     Validate a secure access token and extract violation ID
     
     Args:
         token: Token to validate
-        max_age: Maximum age in seconds (default 24 hours)
+        max_age: Maximum age in seconds (default 7 days)
         
     Returns:
         int or None: Violation ID if valid, None if invalid

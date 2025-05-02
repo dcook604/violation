@@ -1,0 +1,27 @@
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy the rest of the frontend application
+COPY frontend/ .
+
+# Build the application for production
+# Note: For testing purposes, we'll use the development server
+# RUN npm run build
+
+# Set environment variables
+ENV PORT=3001
+ENV REACT_APP_API_URL=http://localhost:5004
+
+# Expose port
+EXPOSE 3001
+
+# Command to run the application
+CMD ["npm", "start"] 
