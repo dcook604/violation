@@ -14,6 +14,17 @@ const routeMap = {
   '/reset-password': '/reset-password'
 };
 
+// Exporting constants for use in other modules
+export const DASHBOARD_PATH = routeMap['/dashboard'];
+export const VIOLATIONS_PATH = routeMap['/violations'];
+export const VIOLATIONS_NEW_PATH = routeMap['/violations/new'];
+export const UNITS_PATH = routeMap['/units'];
+export const ADMIN_USERS_PATH = routeMap['/admin/users'];
+export const ADMIN_SETTINGS_PATH = routeMap['/admin/settings'];
+export const LOGIN_PATH = routeMap['/login'];
+export const FORGOT_PASSWORD_PATH = routeMap['/forgot-password'];
+export const RESET_PASSWORD_PATH = routeMap['/reset-password'];
+
 // Reverse map for lookups
 const reverseRouteMap = Object.entries(routeMap).reduce((acc, [key, value]) => {
   acc[value] = key;

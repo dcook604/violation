@@ -18,6 +18,17 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ObfuscatedRouter from './components/ObfuscatedRouter';
 import UnitCreatePage from './views/UnitCreatePage';
+import {
+  DASHBOARD_PATH,
+  VIOLATIONS_PATH,
+  VIOLATIONS_NEW_PATH,
+  UNITS_PATH,
+  ADMIN_USERS_PATH,
+  ADMIN_SETTINGS_PATH,
+  LOGIN_PATH,
+  FORGOT_PASSWORD_PATH,
+  RESET_PASSWORD_PATH
+} from './utils/routeMapper'; // Import the constants
 
 function NewViolationPage() {
   const navigate = useNavigate();
@@ -134,12 +145,12 @@ function ProtectedRoute({ children }) {
 
 function App() {
   // Get the obfuscated paths directly from routeMapper.js values
-  const dashboardPath = '/r/d5f8a61b2e4c';
-  const violationsPath = '/r/7a9c3b5d2f1e';
-  const violationsNewPath = '/r/e8f2c1d5a6b3';
-  const unitsPath = '/r/b4d6e8f2a1c3';
-  const adminUsersPath = '/r/c3a5b7d9e1f2';
-  const adminSettingsPath = '/r/a1b3c5d7e9f2';
+  // const dashboardPath = '/r/d5f8a61b2e4c'; // Replaced by import
+  // const violationsPath = '/r/7a9c3b5d2f1e'; // Replaced by import
+  // const violationsNewPath = '/r/e8f2c1d5a6b3'; // Replaced by import
+  // const unitsPath = '/r/b4d6e8f2a1c3'; // Replaced by import
+  // const adminUsersPath = '/r/c3a5b7d9e1f2'; // Replaced by import
+  // const adminSettingsPath = '/r/a1b3c5d7e9f2'; // Replaced by import
 
   return (
     <Router>
@@ -147,31 +158,31 @@ function App() {
         <ObfuscatedRouter>
           <Routes>
             {/* Public Routes - Keep these clear for usability */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            <Route path={LOGIN_PATH} element={<Login />} />
+            <Route path={FORGOT_PASSWORD_PATH} element={<ForgotPasswordPage />} />
+            <Route path={`${RESET_PASSWORD_PATH}/:token`} element={<ResetPasswordPage />} />
             <Route path="/violations/public/:public_id" element={<ViolationDetail usePublicId={true} />} />
 
             {/* Protected Routes - Use obfuscated paths directly */}
-            <Route path="/" element={<ProtectedRoute><Layout><Navigate to={dashboardPath} replace /></Layout></ProtectedRoute>} />
-            <Route path={dashboardPath} element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Layout><Navigate to={DASHBOARD_PATH} replace /></Layout></ProtectedRoute>} />
+            <Route path={DASHBOARD_PATH} element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
             
             {/* Unit Profile Routes */}
-            <Route path={unitsPath} element={
+            <Route path={UNITS_PATH} element={ // Use imported constant
               <ProtectedRoute>
                 <Layout>
                   <UnitListPage />
                 </Layout>
               </ProtectedRoute>
             } />
-            <Route path={`${unitsPath}/new`} element={
+            <Route path={`${UNITS_PATH}/new`} element={ // Use imported constant
               <ProtectedRoute>
                 <Layout>
                   <UnitCreatePage />
                 </Layout>
               </ProtectedRoute>
             } />
-            <Route path={`${unitsPath}/:unitNumber`} element={
+            <Route path={`${UNITS_PATH}/:unitNumber`} element={ // Use imported constant
               <ProtectedRoute>
                 <Layout>
                   <UnitProfileDetailPage />
@@ -180,30 +191,30 @@ function App() {
             } />
 
             {/* Admin Routes */}
-            <Route path={adminUsersPath} element={<AdminRoute><Layout><UserManagement /></Layout></AdminRoute>} />
-            <Route path={adminSettingsPath} element={<AdminRoute><Layout><Settings /></Layout></AdminRoute>} /> 
+            <Route path={ADMIN_USERS_PATH} element={<AdminRoute><Layout><UserManagement /></Layout></AdminRoute>} />
+            <Route path={ADMIN_SETTINGS_PATH} element={<AdminRoute><Layout><Settings /></Layout></AdminRoute>} /> 
             
             {/* Violation Routes */}
-            <Route path={violationsNewPath} element={
+            <Route path={VIOLATIONS_NEW_PATH} element={ // Use imported constant
               <ProtectedRoute>
                 <NewViolationPage />
               </ProtectedRoute>
             } />
-            <Route path={violationsPath} element={
+            <Route path={VIOLATIONS_PATH} element={ // Use imported constant
               <ProtectedRoute>
                 <Layout>
                   <ViolationList />
                 </Layout>
               </ProtectedRoute>
             } />
-            <Route path={`${violationsPath}/:id`} element={
+            <Route path={`${VIOLATIONS_PATH}/:id`} element={ // Use imported constant
               <ProtectedRoute>
                 <Layout>
                   <ViolationDetail usePublicId={false} />
                 </Layout>
               </ProtectedRoute>
             } />
-            <Route path={`${violationsPath}/public/:publicId`} element={
+            <Route path={`${VIOLATIONS_PATH}/public/:publicId`} element={ // Use imported constant
               <ProtectedRoute>
                 <Layout>
                   <ViolationDetail usePublicId={true} />
@@ -214,7 +225,7 @@ function App() {
             {/* No longer need to handle /r/* separately since we're using the obfuscated paths directly */}
             
             {/* Dashboard route again for direct access */}
-            <Route path="/dashboard" element={<ProtectedRoute><Layout><Navigate to={dashboardPath} replace /></Layout></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Layout><Navigate to={DASHBOARD_PATH} replace /></Layout></ProtectedRoute>} />
             
             {/* Fallback Route */}
             <Route path="*" element={<ProtectedRoute><div>404 Not Found</div></ProtectedRoute>} />
