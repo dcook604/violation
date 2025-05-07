@@ -3,16 +3,20 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import API from '../api';
 import Button from './common/Button';
 import Spinner from './common/Spinner';
-// Import the edit form if it's separate or handle editing inline
-// import ViolationEditForm from './ViolationEditForm';
+// Import the edit form
+import ViolationEditForm from './ViolationEditForm';
 
-const ViolationDetail = ({ usePublicId = false }) => {
+const ViolationDetail = ({ usePublicId = false, isEditing: initialEditMode = false }) => {
+  console.log('[ViolationDetail] Component Mounted. usePublicId:', usePublicId); // Log 1: Check if component mounts
   const { id, publicId } = useParams();
+  console.log('[ViolationDetail] useParams result:', { id, publicId }); // Log 2: Check params
   const navigate = useNavigate();
   const [violation, setViolation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialEditMode);
+  const [editForm, setEditForm] = useState({});
+  const [saving, setSaving] = useState(false);
   const [replies, setReplies] = useState([]);
   const [replyLoading, setReplyLoading] = useState(false);
   // Assuming authentication context provides user info
@@ -20,6 +24,7 @@ const ViolationDetail = ({ usePublicId = false }) => {
 
   // Check if we're trying to use an undefined publicId and redirect if needed
   useEffect(() => {
+    console.log('[ViolationDetail] Running undefined publicId check effect.'); // Log 3: Check effect runs
     if (usePublicId && (publicId === 'undefined' || publicId === undefined)) {
       console.error('Invalid public ID: undefined');
       navigate('/r/7a9c3b5d2f1e'); // Redirect to violations list
@@ -28,8 +33,10 @@ const ViolationDetail = ({ usePublicId = false }) => {
   }, [usePublicId, publicId, navigate]);
 
   const fetchViolation = useCallback(async () => {
+    console.log('[ViolationDetail] Running fetchViolation callback.'); // Log 4: Check fetch callback runs
     // Skip fetching if we have an undefined publicId
     if (usePublicId && (publicId === 'undefined' || publicId === undefined)) {
+      console.log('[ViolationDetail] Skipping fetch due to invalid publicId.');
       return;
     }
     
@@ -37,6 +44,7 @@ const ViolationDetail = ({ usePublicId = false }) => {
     setError('');
     const identifier = usePublicId ? publicId : id;
     const endpoint = usePublicId ? `/api/violations/public/${identifier}` : `/api/violations/${identifier}`;
+    console.log(`[ViolationDetail] Attempting to fetch from endpoint: ${endpoint}`); // Log 5: Check endpoint URL
     try {
       const res = await API.get(endpoint);
       setViolation(res.data);
@@ -69,6 +77,66 @@ const ViolationDetail = ({ usePublicId = false }) => {
     }
   }, [violation, fetchReplies]);
 
+  // Prepare form data for editing
+  useEffect(() => {
+    if (violation && isEditing) {
+      // Create a form object with dynamic fields
+      const dynamicFields = {};
+      
+      // Add relevant fields to dynamic_fields
+      if (violation.category) dynamicFields['Category'] = violation.category;
+      if (violation.incident_details) dynamicFields['Incident Details'] = violation.incident_details;
+      if (violation.where_did) dynamicFields['Location'] = violation.where_did;
+      if (violation.fine_levied) dynamicFields['Fine Levied'] = violation.fine_levied;
+      if (violation.was_security_or_police_called) dynamicFields['Security/Police Called'] = violation.was_security_or_police_called;
+      if (violation.noticed_by) dynamicFields['Noticed By'] = violation.noticed_by;
+      if (violation.action_taken) dynamicFields['Action Taken'] = violation.action_taken;
+      if (violation.people_involved) dynamicFields['People Involved'] = violation.people_involved;
+      
+      setEditForm({
+        id: violation.id,
+        reference: violation.reference,
+        status: violation.status,
+        building: violation.building,
+        unit_number: violation.unit_number,
+        dynamic_fields: dynamicFields
+      });
+    }
+  }, [violation, isEditing]);
+
+  const handleEditSave = async () => {
+    setSaving(true);
+    try {
+      // Prepare the data for API
+      const updateData = {
+        category: editForm.dynamic_fields?.Category,
+        incident_details: editForm.dynamic_fields?.['Incident Details'],
+        where_did: editForm.dynamic_fields?.Location,
+        fine_levied: editForm.dynamic_fields?.['Fine Levied'],
+        was_security_or_police_called: editForm.dynamic_fields?.['Security/Police Called'],
+        noticed_by: editForm.dynamic_fields?.['Noticed By'],
+        action_taken: editForm.dynamic_fields?.['Action Taken'],
+        people_involved: editForm.dynamic_fields?.['People Involved'],
+        // Add other fields as needed
+        status: editForm.status,
+        building: editForm.building,
+        unit_number: editForm.unit_number
+      };
+      
+      await API.put(`/api/violations/${violation.id}`, updateData);
+      setIsEditing(false);
+      fetchViolation(); // Refresh data
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update violation');
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this violation?')) {
       try {
@@ -80,17 +148,6 @@ const ViolationDetail = ({ usePublicId = false }) => {
     }
   };
 
-  const handleEditSave = async (updatedData) => {
-    // Implement save logic using PUT /api/violations/:id
-    try {
-        await API.put(`/api/violations/${violation.id}`, updatedData);
-        setIsEditing(false);
-        fetchViolation(); // Refresh data
-    } catch (err) {
-        setError(err.response?.data?.error || 'Failed to update violation');
-    }
-  };
-  
   // Helper to format date
   const formatDate = (dateString) => {
       if (!dateString) return 'N/A';
@@ -124,13 +181,16 @@ const ViolationDetail = ({ usePublicId = false }) => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Violation Details</h2>
 
-        {/* Edit Mode - Render form or inline editable fields */} 
+        {/* Edit Mode - Now using the ViolationEditForm */} 
         {isEditing ? (
-            // <ViolationEditForm violation={violation} onSave={handleEditSave} onCancel={() => setIsEditing(false)} />
-            <div className="text-center p-4 border rounded bg-gray-100">
-                <p className="mb-2">Inline editing form placeholder.</p>
-                <Button onClick={() => setIsEditing(false)} color="gray">Cancel</Button>
-            </div>
+          <ViolationEditForm 
+            form={editForm}
+            setForm={setEditForm}
+            saving={saving}
+            handleSave={handleEditSave}
+            handleCancel={handleCancel}
+            errors={{}}
+          />
         ) : (
           <> 
             {/* Display Static Fields */} 
