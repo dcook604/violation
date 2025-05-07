@@ -25,7 +25,7 @@ export default function ViolationsTable({ violations }) {
                 {v.created_at ? new Date(v.created_at).toLocaleDateString() : ''}
               </td>
               <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
-                <Link to={v.public_id ? `/violations/public/${v.public_id}` : `${VIOLATIONS_PATH}/${v.id}`} className="text-blue-600 hover:underline mr-2">View</Link>
+                <Link to={v.public_id ? `${VIOLATIONS_PATH}/public/${v.public_id}` : `${VIOLATIONS_PATH}/${v.id}`} className="text-blue-600 hover:underline mr-2">View</Link>
                 {v.html_path && 
                   <a href={v.html_path} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline mr-2">HTML</a>
                 }
