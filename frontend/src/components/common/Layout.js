@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import API from '../../api';
@@ -9,14 +9,36 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [violationsDropdownOpen, setViolationsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Fixed obfuscated route paths
   const dashboardPath = '/r/d5f8a61b2e4c';
   const violationsPath = '/r/7a9c3b5d2f1e';
+  const violationsApprovalsPath = '/r/9b1c7d4e8f3a';
   const violationsNewPath = '/r/e8f2c1d5a6b3';
   const unitsPath = '/r/b4d6e8f2a1c3';
   const adminUsersPath = '/r/c3a5b7d9e1f2';
   const adminSettingsPath = '/r/a1b3c5d7e9f2';
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setViolationsDropdownOpen(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
+  
+  // Close dropdown when location changes
+  useEffect(() => {
+    setViolationsDropdownOpen(false);
+  }, [location.pathname]);
   
   // Helper function to check if a path is active
   const isActive = (path) => {
@@ -34,6 +56,11 @@ export default function Layout({ children }) {
     return `${baseClasses} ${isActive(path) ? activeClasses : inactiveClasses}`;
   };
 
+  // Check if any violations-related path is active
+  const isViolationsActive = () => {
+    return isActive(violationsPath) || isActive(violationsApprovalsPath) || isActive(violationsNewPath);
+  };
+
   const handleLogout = async () => {
     try {
       await API.post('/api/auth/logout');
@@ -42,6 +69,11 @@ export default function Layout({ children }) {
     } catch (error) {
       console.error('Logout failed:', error);
     }
+  };
+
+  // Toggle violations dropdown
+  const toggleViolationsDropdown = () => {
+    setViolationsDropdownOpen(!violationsDropdownOpen);
   };
 
   return (
@@ -77,14 +109,47 @@ export default function Layout({ children }) {
                     Unit Profiles
                   </Link>
                 </li>
-                <li className="flex items-center">
-                  <Link
-                    to={violationsPath}
-                    className={getNavItemClasses(violationsPath)}
+                {/* Violations Dropdown */}
+                <li className="flex items-center relative" ref={dropdownRef}>
+                  <button
+                    onClick={toggleViolationsDropdown}
+                    className={`${getNavItemClasses(violationsPath)} ${isViolationsActive() ? 'text-blue-600' : ''} relative z-10`}
                   >
                     <i className="fas fa-exclamation-triangle text-blueGray-400 mr-2 text-lg"></i>
                     Violations
-                  </Link>
+                    <i className={`fas fa-chevron-down ml-1 text-xs transition-transform ${violationsDropdownOpen ? 'transform rotate-180' : ''}`}></i>
+                  </button>
+                  {/* Improved Dropdown Menu with fixed positioning */}
+                  {violationsDropdownOpen && (
+                    <div 
+                      className="fixed bg-white shadow-lg rounded-md border border-gray-200 w-48 z-50 overflow-hidden"
+                      style={{
+                        top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 8 : 0,
+                        left: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().left : 0,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+                      }}
+                    >
+                      <div className="py-1">
+                        <Link
+                          to={violationsPath}
+                          className={`block w-full px-4 py-3 text-sm font-medium border-l-4 ${isActive(violationsPath) ? 'bg-blue-50 text-blue-600 border-blue-500' : 'border-transparent hover:bg-gray-50 text-gray-700 hover:text-gray-900'} transition-colors duration-150`}
+                          onClick={() => setViolationsDropdownOpen(false)}
+                        >
+                          <i className="fas fa-list text-blueGray-400 mr-2"></i>
+                          Violations List
+                        </Link>
+                        <div className="border-t border-gray-100"></div>
+                        <Link
+                          to={violationsApprovalsPath}
+                          className={`block w-full px-4 py-3 text-sm font-medium border-l-4 ${isActive(violationsApprovalsPath) ? 'bg-blue-50 text-blue-600 border-blue-500' : 'border-transparent hover:bg-gray-50 text-gray-700 hover:text-gray-900'} transition-colors duration-150`}
+                          onClick={() => setViolationsDropdownOpen(false)}
+                        >
+                          <i className="fas fa-check-circle text-blueGray-400 mr-2"></i>
+                          Approvals
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                 </li>
                 <li className="flex items-center">
                   <Link

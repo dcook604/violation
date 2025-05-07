@@ -191,6 +191,38 @@ def get_violations():
 - Better visibility with distinct button designs
 - Updated API to ensure document links are always available 
 
+# Navigation Implementation
+
+## Dropdown Menu
+
+### Violations Dropdown
+- Implemented dropdown navigation for Violations section
+- Contains "Violations List" and "Approvals" options
+- Uses React useRef and useEffect hooks for proper positioning
+- Click-outside detection to close dropdown automatically
+- Automatic close on page navigation
+
+### Dropdown Positioning
+```jsx
+// Fixed positioning with dynamic calculations
+<div 
+  className="fixed bg-white shadow-lg rounded-md border border-gray-200 w-48 z-50 overflow-hidden"
+  style={{
+    top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 8 : 0,
+    left: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().left : 0,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+  }}
+>
+  {/* Dropdown options */}
+</div>
+```
+
+### User Experience
+- Visual highlighting for active navigation items
+- Consistent styling with main navigation
+- Enhanced shadow and border effects for better visibility
+- Smooth transitions for hover and active states
+
 # Security Enhancements
 
 ## Password Security
