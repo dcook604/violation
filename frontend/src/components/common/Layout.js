@@ -8,6 +8,7 @@ import logo from '../../assets/images/spectrum4-logo.png';
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Fixed obfuscated route paths
   const dashboardPath = '/r/d5f8a61b2e4c';
@@ -16,6 +17,22 @@ export default function Layout({ children }) {
   const unitsPath = '/r/b4d6e8f2a1c3';
   const adminUsersPath = '/r/c3a5b7d9e1f2';
   const adminSettingsPath = '/r/a1b3c5d7e9f2';
+  
+  // Helper function to check if a path is active
+  const isActive = (path) => {
+    // Check if current location matches the path or starts with it
+    return location.pathname === path || 
+           (path !== '/' && location.pathname.startsWith(path));
+  };
+  
+  // Function to determine active nav item classes
+  const getNavItemClasses = (path) => {
+    const baseClasses = "px-3 py-4 lg:py-2 flex items-center text-xs uppercase font-bold transition-all duration-200";
+    const inactiveClasses = "hover:text-blueGray-500 text-blueGray-700";
+    const activeClasses = "text-blue-600 bg-blue-50 shadow-md rounded-md border-l-4 border-blue-500";
+    
+    return `${baseClasses} ${isActive(path) ? activeClasses : inactiveClasses}`;
+  };
 
   const handleLogout = async () => {
     try {
@@ -45,7 +62,7 @@ export default function Layout({ children }) {
                 <li className="flex items-center">
                   <Link
                     to={dashboardPath}
-                    className="hover:text-blueGray-500 text-blueGray-700 px-3 py-4 lg:py-2 flex items-center text-xs uppercase font-bold"
+                    className={getNavItemClasses(dashboardPath)}
                   >
                     <i className="fas fa-tv text-blueGray-400 mr-2 text-lg"></i>
                     Dashboard
@@ -54,7 +71,7 @@ export default function Layout({ children }) {
                 <li className="flex items-center">
                   <Link
                     to={unitsPath}
-                    className="hover:text-blueGray-500 text-blueGray-700 px-3 py-4 lg:py-2 flex items-center text-xs uppercase font-bold"
+                    className={getNavItemClasses(unitsPath)}
                   >
                     <i className="fas fa-building text-blueGray-400 mr-2 text-lg"></i>
                     Unit Profiles
@@ -63,7 +80,7 @@ export default function Layout({ children }) {
                 <li className="flex items-center">
                   <Link
                     to={violationsPath}
-                    className="hover:text-blueGray-500 text-blueGray-700 px-3 py-4 lg:py-2 flex items-center text-xs uppercase font-bold"
+                    className={getNavItemClasses(violationsPath)}
                   >
                     <i className="fas fa-exclamation-triangle text-blueGray-400 mr-2 text-lg"></i>
                     Violations
@@ -72,7 +89,7 @@ export default function Layout({ children }) {
                 <li className="flex items-center">
                   <Link
                     to={violationsNewPath}
-                    className="hover:text-blueGray-500 text-blueGray-700 px-3 py-4 lg:py-2 flex items-center text-xs uppercase font-bold"
+                    className={getNavItemClasses(violationsNewPath)}
                   >
                     <i className="fas fa-plus text-blueGray-400 mr-2 text-lg"></i>
                     New Violation
@@ -83,7 +100,7 @@ export default function Layout({ children }) {
                     <li className="flex items-center">
                       <Link
                         to={adminUsersPath}
-                        className="hover:text-blueGray-500 text-blueGray-700 px-3 py-4 lg:py-2 flex items-center text-xs uppercase font-bold"
+                        className={getNavItemClasses(adminUsersPath)}
                       >
                         <i className="fas fa-users text-blueGray-400 mr-2 text-lg"></i>
                         Users
@@ -102,7 +119,7 @@ export default function Layout({ children }) {
                     <li className="flex items-center">
                       <Link
                         to={adminSettingsPath}
-                        className="hover:text-blueGray-500 text-blueGray-700 px-3 py-4 lg:py-2 flex items-center text-xs uppercase font-bold"
+                        className={getNavItemClasses(adminSettingsPath)}
                       >
                         <i className="fas fa-cog text-blueGray-400 mr-2 text-lg"></i>
                         Settings
