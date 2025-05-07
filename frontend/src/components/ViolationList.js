@@ -29,12 +29,12 @@ export default function ViolationList() {
       <div className="flex flex-wrap gap-4 mb-4 items-center">
         <div className="flex items-center">
           <label htmlFor="dateFilter" className="mr-2 text-sm font-medium">Date Filter:</label>
-          <div className="relative">
+          <div className="relative inline-block w-36">
             <select
               id="dateFilter"
               value={dateFilter}
               onChange={(e) => handleDateFilterChange(e.target.value)}
-              className="appearance-none bg-white border rounded px-3 py-1 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-3 py-1 pr-8 rounded shadow leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Time</option>
               <option value="last7days">Last 7 Days</option>
@@ -49,12 +49,12 @@ export default function ViolationList() {
         </div>
         <div className="flex items-center">
           <label htmlFor="perPage" className="mr-2 text-sm font-medium">Show:</label>
-          <div className="relative">
+          <div className="relative inline-block w-24">
             <select
               id="perPage"
               value={perPage}
               onChange={handlePerPageChange}
-              className="appearance-none bg-white border rounded px-3 py-1 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-3 py-1 pr-8 rounded shadow leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="5">5</option>
               <option value="10">10</option>
