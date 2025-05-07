@@ -6,7 +6,7 @@ import { VIOLATIONS_PATH } from "../utils/routeMapper";
 
 // Components
 const StatCard = ({ title, value, icon, color, subtitle }) => (
-  <div className="relative flex flex-col min-w-0 break-words bg-white rounded mb-6 xl:mb-0 shadow-lg">
+  <div className="relative flex flex-col min-w-0 break-words bg-white rounded mb-6 xl:mb-0 shadow-lg" style={{ height: '140px', position: 'relative', overflow: 'hidden' }}>
     <div className="flex-auto p-4">
       <div className="flex flex-wrap">
         <div className="relative w-full pr-4 max-w-full flex-grow flex-1">
@@ -27,6 +27,18 @@ const StatCard = ({ title, value, icon, color, subtitle }) => (
         </div>
       </div>
     </div>
+    {/* Decorative swoosh at the bottom - same width for all cards */}
+    <div style={{
+      position: 'absolute',
+      bottom: '-15px',
+      left: '-10px',
+      right: '-10px',
+      height: '40px',
+      backgroundColor: '#fde047',
+      borderRadius: '100%',
+      opacity: 0.7,
+      transform: 'scale(1.1, 1)'
+    }}></div>
   </div>
 );
 
