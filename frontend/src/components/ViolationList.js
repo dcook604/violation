@@ -29,30 +29,44 @@ export default function ViolationList() {
       <div className="flex flex-wrap gap-4 mb-4 items-center">
         <div className="flex items-center">
           <label htmlFor="dateFilter" className="mr-2 text-sm font-medium">Date Filter:</label>
-          <select
-            id="dateFilter"
-            value={dateFilter}
-            onChange={(e) => handleDateFilterChange(e.target.value)}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            <option value="">All Time</option>
-            <option value="last7days">Last 7 Days</option>
-            <option value="last30days">Last 30 Days</option>
-          </select>
+          <div className="relative">
+            <select
+              id="dateFilter"
+              value={dateFilter}
+              onChange={(e) => handleDateFilterChange(e.target.value)}
+              className="appearance-none bg-white border rounded px-3 py-1 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Time</option>
+              <option value="last7days">Last 7 Days</option>
+              <option value="last30days">Last 30 Days</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+              </svg>
+            </div>
+          </div>
         </div>
         <div className="flex items-center">
           <label htmlFor="perPage" className="mr-2 text-sm font-medium">Show:</label>
-          <select
-            id="perPage"
-            value={perPage}
-            onChange={handlePerPageChange}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-          </select>
+          <div className="relative">
+            <select
+              id="perPage"
+              value={perPage}
+              onChange={handlePerPageChange}
+              className="appearance-none bg-white border rounded px-3 py-1 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+              </svg>
+            </div>
+          </div>
         </div>
         <div className="text-sm text-gray-500">
           Showing {violations.length} of {totalItems} violations
