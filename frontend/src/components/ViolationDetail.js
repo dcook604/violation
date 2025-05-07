@@ -83,7 +83,7 @@ const ViolationDetail = ({ usePublicId = false, isEditing: initialEditMode = fal
       // Create a form object with dynamic fields
       const dynamicFields = {};
       
-      // Add relevant fields to dynamic_fields
+      // Add all relevant fields to dynamic_fields
       if (violation.category) dynamicFields['Category'] = violation.category;
       if (violation.incident_details) dynamicFields['Incident Details'] = violation.incident_details;
       if (violation.where_did) dynamicFields['Location'] = violation.where_did;
@@ -92,13 +92,16 @@ const ViolationDetail = ({ usePublicId = false, isEditing: initialEditMode = fal
       if (violation.noticed_by) dynamicFields['Noticed By'] = violation.noticed_by;
       if (violation.action_taken) dynamicFields['Action Taken'] = violation.action_taken;
       if (violation.people_involved) dynamicFields['People Involved'] = violation.people_involved;
+      if (violation.people_called) dynamicFields['People Called'] = violation.people_called;
+      if (violation.actioned_by) dynamicFields['Actioned By'] = violation.actioned_by;
       
       setEditForm({
         id: violation.id,
         reference: violation.reference,
-        status: violation.status,
-        building: violation.building,
-        unit_number: violation.unit_number,
+        status: violation.status || 'Open',
+        building: violation.building || '',
+        unit_number: violation.unit_number || '',
+        concierge_shift: violation.concierge_shift || '',
         dynamic_fields: dynamicFields
       });
     }
@@ -117,10 +120,13 @@ const ViolationDetail = ({ usePublicId = false, isEditing: initialEditMode = fal
         noticed_by: editForm.dynamic_fields?.['Noticed By'],
         action_taken: editForm.dynamic_fields?.['Action Taken'],
         people_involved: editForm.dynamic_fields?.['People Involved'],
+        people_called: editForm.dynamic_fields?.['People Called'],
+        actioned_by: editForm.dynamic_fields?.['Actioned By'],
         // Add other fields as needed
         status: editForm.status,
         building: editForm.building,
-        unit_number: editForm.unit_number
+        unit_number: editForm.unit_number,
+        concierge_shift: editForm.concierge_shift
       };
       
       await API.put(`/api/violations/${violation.id}`, updateData);
@@ -244,14 +250,22 @@ const ViolationDetail = ({ usePublicId = false, isEditing: initialEditMode = fal
             </div>
 
              {/* Incident Details & Action Taken */}
-             <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2 text-gray-700">Incident Details</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{violation.incident_details || 'Not provided.'}</p>
-            </div>
-             <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2 text-gray-700">Action Taken</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{violation.action_taken || 'Not specified.'}</p>
-            </div>
+             <div className="mb-6 p-4 bg-gray-50 rounded border relative overflow-hidden">
+                <h3 className="text-lg font-semibold mb-3 text-gray-700">Incident Details</h3>
+                <div className="relative z-10">
+                  <p className="text-gray-700 whitespace-pre-wrap break-words max-w-full overflow-hidden">
+                    {violation.incident_details || 'Not provided.'}
+                  </p>
+                </div>
+             </div>
+             <div className="mb-6 p-4 bg-gray-50 rounded border relative overflow-hidden">
+                <h3 className="text-lg font-semibold mb-3 text-gray-700">Action Taken</h3>
+                <div className="relative z-10">
+                  <p className="text-gray-700 whitespace-pre-wrap break-words max-w-full overflow-hidden">
+                    {violation.action_taken || 'Not specified.'}
+                  </p>
+                </div>
+             </div>
 
             {/* Attached Evidence */} 
             <div className="mb-6">
