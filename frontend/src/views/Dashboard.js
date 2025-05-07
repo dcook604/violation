@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import API from "../api";
 import { Link } from "react-router-dom";
+import { VIOLATIONS_PATH } from "../utils/routeMapper";
 
 // Components
 const StatCard = ({ title, value, icon, color, subtitle }) => (
@@ -54,7 +55,7 @@ const RecentViolationsTable = ({ violations }) => (
           {violations.map((violation) => (
             <tr key={violation.id}>
               <th className="border-t-0 px-6 align-middle border-l-0 border-r-0 text-xs whitespace-nowrap p-4 text-left">
-                <Link to={`/violations/public/${violation.public_id}`} className="text-blue-600 hover:underline">
+                <Link to={`${VIOLATIONS_PATH}/public/${violation.public_id}`} className="text-blue-600 hover:underline">
                   {violation.reference}
                 </Link>
               </th>
