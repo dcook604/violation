@@ -622,3 +622,45 @@ The Unit Profile UI is implemented using React components:
 ## Migration Note
 - As of [date], all CSRF token logic has been removed. If you need cross-origin POSTs in the future, you must reintroduce CSRF tokens for those endpoints.
 - **For production, always use `JWT_COOKIE_SECURE = True`.** 
+
+# Authentication
+
+## Remember Me Functionality (Login Page)
+
+- **Objective**: Provide a "Remember Me" option on the login page to pre-fill the user's email address for convenience.
+- **Implementation Details**:
+    - A "Remember me" checkbox has been added to the `frontend/src/views/auth/Login.js` component.
+    - Client-side `localStorage` is used to store the email address:
+        - If the user successfully logs in with "Remember me" checked, their email is stored under the key `rememberedEmail`.
+        - If the user logs in with "Remember me" unchecked, any existing `rememberedEmail` is removed from `localStorage`.
+    - On component mount, `Login.js` checks `localStorage` for `rememberedEmail`. If found, the email input is pre-filled, and the "Remember me" checkbox is checked.
+    - The user's password is **never** stored in `localStorage` or any client-side storage.
+    - The `logout` function in `frontend/src/context/AuthContext.js` has been updated to explicitly remove `rememberedEmail` from `localStorage` to ensure data is cleared on explicit logout.
+- **Affected Files**:
+    - `frontend/src/views/auth/Login.js`: UI changes, state management for the checkbox, logic to read/write email to `localStorage`.
+    - `frontend/src/context/AuthContext.js`: Modification to `logout` function to clear `localStorage`.
+
+## Client-Side Idle Timeout
+
+- **Objective**: Automatically log out users after 30 minutes of UI inactivity to enhance security.
+- **Implementation Details (in `frontend/src/context/AuthContext.js`):**
+    - **Durations**: 
+        - `IDLE_TIMEOUT_DURATION`: 30 minutes.
+        - `WARNING_DURATION_BEFORE_TIMEOUT`: 2 minutes (modal shown 2 minutes before final logout).
+    - **Timers**: `useRef` is used for `idleTimerRef` and `warningTimerRef` to manage `setTimeout` IDs.
+    - **Activity Detection**: Event listeners (`mousemove`, `keydown`, `click`, `scroll`, `touchstart`) are attached to the `window`.
+        - Any detected activity calls `resetIdleTimers`.
+    - **`resetIdleTimers` Function**:
+        - Clears existing warning and idle timeouts.
+        - Hides the warning modal.
+        - If a user is logged in, sets new timeouts for showing the warning modal and for automatic logout.
+    - **Warning Modal**: 
+        - A state variable `showIdleWarningModal` controls its visibility.
+        - The modal provides "Stay Logged In" (calls `resetIdleTimers`) and "Logout Now" (calls `logout`) options.
+    - **Automatic Logout**: If the idle timer expires, `logoutDueToInactivity` is called, which triggers the main `logout` function.
+    - **Lifecycle Management**: `useEffect` hooks manage the setup and cleanup of event listeners and timers based on user login status.
+- **User Experience**:
+    - Users are warned 2 minutes before automatic logout.
+    - Activity on the site resets the inactivity countdown.
+- **Affected Files**:
+    - `frontend/src/context/AuthContext.js`: Core logic for idle detection, timer management, modal display, and event handling.
