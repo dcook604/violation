@@ -122,103 +122,10 @@ def reorder_fields():
     
     return jsonify({'message': 'Fields reordered'})
 
-@admin_bp.route('/api/admin/settings', methods=['GET'])
-@admin_required
-def get_settings():
-    """Get the current settings"""
-    settings = Settings.get_settings()
-    
-    # Log the value being read from the database for debugging
-    current_app.logger.info(f"Reading settings from database")
-    current_app.logger.info(f"SMTP Server: {settings.smtp_server}")
-    current_app.logger.info(f"SMTP Port: {settings.smtp_port}")
-    current_app.logger.info(f"SMTP Username: {settings.smtp_username}")
-    current_app.logger.info(f"TLS Enabled (DB value): {settings.smtp_use_tls}")
-    
-    # Don't include the password in the response
-    # Important: Use appropriate handling for boolean fields
-    return jsonify({
-        'id': settings.id,
-        'smtp_server': settings.smtp_server or '',
-        'smtp_port': settings.smtp_port or 25,
-        'smtp_username': settings.smtp_username or '',
-        'smtp_use_tls': bool(settings.smtp_use_tls),  # Convert to proper boolean
-        'smtp_from_email': settings.smtp_from_email or '',
-        'smtp_from_name': settings.smtp_from_name or '',
-        'notification_emails': settings.notification_emails or '',
-        'enable_global_notifications': bool(settings.enable_global_notifications),  # Convert to proper boolean
-        'updated_at': settings.updated_at.isoformat() if settings.updated_at else None
-    })
-
-@admin_bp.route('/api/admin/settings', methods=['PUT'])
-@admin_required
-def update_settings():
-    """Update settings"""
-    settings = Settings.get_settings()
-    data = request.json or {}
-    
-    # Log the incoming data for debugging
-    current_app.logger.info(f"Settings update received: {data}")
-    
-    # Update SMTP settings
-    if 'smtp_server' in data:
-        settings.smtp_server = data['smtp_server']
-    if 'smtp_port' in data:
-        settings.smtp_port = data['smtp_port']
-    if 'smtp_username' in data:
-        settings.smtp_username = data['smtp_username']
-    if 'smtp_password' in data and data['smtp_password']:
-        # Only update password if a new one is provided
-        settings.smtp_password = data['smtp_password']
-    
-    # Special handling for boolean TLS setting
-    if 'smtp_use_tls' in data:
-        tls_value = data['smtp_use_tls']
-        # Make sure we convert to proper boolean
-        if isinstance(tls_value, bool):
-            settings.smtp_use_tls = tls_value
-        elif isinstance(tls_value, str):
-            settings.smtp_use_tls = tls_value.lower() in ('true', 't', 'yes', 'y', '1')
-        elif isinstance(tls_value, int):
-            settings.smtp_use_tls = bool(tls_value)
-        else:
-            current_app.logger.warning(f"Received invalid TLS value: {tls_value} (type: {type(tls_value)})")
-        
-        # Log the new TLS value
-        current_app.logger.info(f"TLS setting updated to: {settings.smtp_use_tls}")
-    
-    if 'smtp_from_email' in data:
-        settings.smtp_from_email = data['smtp_from_email']
-    if 'smtp_from_name' in data:
-        settings.smtp_from_name = data['smtp_from_name']
-    
-    # Update notification settings
-    if 'notification_emails' in data:
-        settings.notification_emails = data['notification_emails']
-    if 'enable_global_notifications' in data:
-        settings.enable_global_notifications = data['enable_global_notifications']
-    
-    # Record who updated the settings
-    settings.updated_by = get_jwt_identity()
-    
-    db.session.commit()
-    
-    # Log all settings after update for debugging
-    current_app.logger.info(f"Settings updated successfully by {get_jwt().get('email')}")
-    current_app.logger.info(f"SMTP Server: {settings.smtp_server}")
-    current_app.logger.info(f"SMTP Port: {settings.smtp_port}")
-    current_app.logger.info(f"SMTP Username: {settings.smtp_username}")
-    current_app.logger.info(f"TLS Enabled: {settings.smtp_use_tls}")
-    
-    return jsonify({
-        'message': 'Settings updated successfully',
-        'updated_at': settings.updated_at.isoformat() if settings.updated_at else None
-    })
-
 @admin_bp.route('/api/admin/settings/test-email', methods=['POST'])
 @admin_required
 def test_email():
-    """Send a test email using the current settings"""
+    """Send a test email using the current environment SMTP settings"""
     from .utils import send_email
     import traceback
     
@@ -228,18 +135,20 @@ def test_email():
     if not recipient:
         return jsonify({'error': 'No recipient email provided'}), 400
     
-    # Get the current settings
-    settings = Settings.get_settings()
+    # Removed: Get settings from database
+    # settings = Settings.get_settings()
     
-    # Log the SMTP configuration for debugging
-    current_app.logger.info(f"Test email requested with SMTP settings:")
-    current_app.logger.info(f"Server: {settings.smtp_server}")
-    current_app.logger.info(f"Port: {settings.smtp_port}")
-    current_app.logger.info(f"Username: {settings.smtp_username}")
-    current_app.logger.info(f"TLS Enabled: {settings.smtp_use_tls}")
-    current_app.logger.info(f"Password: {'Set' if settings.smtp_password else 'Not set'}")
+    # Log the SMTP configuration being used (from app.config / .env)
+    current_app.logger.info(f"Test email requested. Using App Config SMTP settings:")
+    current_app.logger.info(f"Server: {current_app.config.get('MAIL_SERVER')}")
+    current_app.logger.info(f"Port: {current_app.config.get('MAIL_PORT')}")
+    current_app.logger.info(f"Username: {current_app.config.get('MAIL_USERNAME')}")
+    current_app.logger.info(f"TLS Enabled: {current_app.config.get('MAIL_USE_TLS')}")
+    current_app.logger.info(f"Password: {'Set' if current_app.config.get('MAIL_PASSWORD') else 'Not set'}")
+    current_app.logger.info(f"Default Sender: {current_app.config.get('MAIL_DEFAULT_SENDER')}")
     
     try:
+        # send_email now uses the app config directly
         send_email(
             subject="Test Email from Violation System",
             recipients=[recipient],
@@ -253,7 +162,7 @@ def test_email():
         current_app.logger.error(f"Error sending test email: {error_msg}")
         current_app.logger.error(f"Stack trace: {stack_trace}")
         
-        # Check for common errors and provide helpful responses
+        # Check for common errors and provide helpful responses (This logic remains useful)
         if "Connection refused" in error_msg:
             detailed_msg = (
                 "Connection refused error. Possible causes:\n"
@@ -269,6 +178,9 @@ def test_email():
                 "2. Account may require specific security settings\n"
                 f"Error details: {error_msg}"
             )
+        # Add check for missing configuration based on ValueError from send_email
+        elif isinstance(e, ValueError) and "Missing essential SMTP configuration" in error_msg:
+            detailed_msg = f"Email sending failed: {error_msg}. Please configure required MAIL_* environment variables."
         else:
             detailed_msg = f"Failed to send test email: {error_msg}"
             

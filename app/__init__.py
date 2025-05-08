@@ -12,6 +12,11 @@ from .config import config_by_name
 from datetime import timedelta
 from flask.sessions import SecureCookieSessionInterface
 import os.path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+# Ensure this runs early, before create_app uses config
+load_dotenv()
 
 # Custom session interface to fix SameSite issue
 class CustomSessionInterface(SecureCookieSessionInterface):
@@ -39,7 +44,7 @@ mail = Mail()
 migrate = Migrate()
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["200 per day", "200 per hour"],
     storage_uri="memory://",
     strategy="fixed-window"
 )
@@ -183,49 +188,4 @@ def create_app(config_name=None):
     app.register_blueprint(unit_blueprint)
     app.register_blueprint(test_jwt_blueprint)
     
-    # Load SMTP settings from database when the app is fully initialized
-    with app.app_context():
-        try:
-            from .models import Settings
-            settings = Settings.get_settings()
-            
-            # Only apply if all required settings are present
-            if (settings.smtp_server and settings.smtp_port and 
-                settings.smtp_username and settings.smtp_password):
-                
-                # Apply settings to app configuration
-                app.config['MAIL_SERVER'] = settings.smtp_server
-                app.config['MAIL_PORT'] = settings.smtp_port
-                app.config['MAIL_USERNAME'] = settings.smtp_username
-                app.config['MAIL_PASSWORD'] = settings.smtp_password
-                app.config['MAIL_USE_TLS'] = settings.smtp_use_tls
-                
-                # Set default sender if available
-                if settings.smtp_from_email:
-                    if settings.smtp_from_name:
-                        sender = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
-                    else:
-                        sender = settings.smtp_from_email
-                    app.config['MAIL_DEFAULT_SENDER'] = sender
-                
-                # Reinitialize mail with the new configuration
-                mail.init_app(app)
-                
-                app.logger.info(f"SMTP settings loaded from database: {settings.smtp_server}:{settings.smtp_port}")
-            else:
-                missing = []
-                if not settings.smtp_server:
-                    missing.append("SMTP Server")
-                if not settings.smtp_port:
-                    missing.append("SMTP Port")
-                if not settings.smtp_username:
-                    missing.append("SMTP Username")
-                if not settings.smtp_password:
-                    missing.append("SMTP Password")
-                
-                app.logger.warning(f"Could not load SMTP settings from database - missing: {', '.join(missing)}")
-                app.logger.warning("Using default mail settings. Test emails may fail.")
-        except Exception as e:
-            app.logger.error(f"Error loading SMTP settings from database: {str(e)}")
-
     return app

@@ -119,112 +119,11 @@ export default function Settings() {
       
       <form onSubmit={handleSubmit}>
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold mb-4">SMTP Email Settings</h3>
+          <h3 className="text-xl font-bold mb-4">Email Configuration</h3>
           <p className="text-gray-600 mb-4">
-            Configure the SMTP server used to send violation notifications.
+            The system's email sending configuration is managed via environment variables.
+            Use the test function below to verify the current setup.
           </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                SMTP Server
-              </label>
-              <Input
-                name="smtp_server"
-                value={settings.smtp_server}
-                onChange={handleChange}
-                placeholder="e.g. smtp.gmail.com"
-                className="w-full"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                SMTP Port
-              </label>
-              <Input
-                name="smtp_port"
-                type="number"
-                value={settings.smtp_port}
-                onChange={handleChange}
-                placeholder="e.g. 587"
-                className="w-full"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                SMTP Username
-              </label>
-              <Input
-                name="smtp_username"
-                value={settings.smtp_username}
-                onChange={handleChange}
-                placeholder="e.g. user@example.com"
-                className="w-full"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                SMTP Password
-              </label>
-              <Input
-                name="smtp_password"
-                type="password"
-                value={settings.smtp_password}
-                onChange={handleChange}
-                placeholder="Leave blank to keep existing password"
-                className="w-full"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Leave blank to keep the existing password.
-              </p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                From Email
-              </label>
-              <Input
-                name="smtp_from_email"
-                value={settings.smtp_from_email}
-                onChange={handleChange}
-                placeholder="e.g. violations@example.com"
-                className="w-full"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                From Name
-              </label>
-              <Input
-                name="smtp_from_name"
-                value={settings.smtp_from_name}
-                onChange={handleChange}
-                placeholder="e.g. Violation System"
-                className="w-full"
-              />
-            </div>
-          </div>
-          
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                name="smtp_use_tls"
-                checked={settings.smtp_use_tls}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600"
-              />
-              <span className="ml-2 text-sm text-gray-700">Use TLS/SSL</span>
-            </label>
-          </div>
           
           <div className="bg-gray-50 p-4 rounded mt-4">
             <h4 className="font-semibold mb-2">Test Email Configuration</h4>
@@ -237,7 +136,7 @@ export default function Settings() {
               />
               <Button
                 onClick={handleTestEmail}
-                disabled={sendingTest || !settings.smtp_server}
+                disabled={sendingTest}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
               >
                 {sendingTest ? 'Sending...' : 'Send Test Email'}
@@ -252,26 +151,23 @@ export default function Settings() {
         </div>
         
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold mb-4">Global Notification Settings</h3>
+          <h3 className="text-xl font-bold mb-4">Global Notifications</h3>
           <p className="text-gray-600 mb-4">
-            Configure additional email addresses that should receive ALL violation notifications.
+            Configure email addresses to receive system-wide notifications.
           </p>
           
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Global Notification Emails
+              Notification Emails (comma-separated)
             </label>
             <textarea
               name="notification_emails"
               value={settings.notification_emails}
               onChange={handleChange}
-              placeholder="Enter email addresses separated by commas"
               rows="3"
-              className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-            ></textarea>
-            <p className="text-xs text-gray-500 mt-1">
-              Enter email addresses separated by commas.
-            </p>
+              placeholder="e.g. admin@example.com, manager@example.com"
+              className="w-full p-2 border border-gray-300 rounded shadow-sm"
+            />
           </div>
           
           <div className="mb-4">
@@ -283,9 +179,7 @@ export default function Settings() {
                 onChange={handleChange}
                 className="h-4 w-4 text-blue-600"
               />
-              <span className="ml-2 text-sm text-gray-700">
-                Enable global notifications for all violations
-              </span>
+              <span className="ml-2 text-sm text-gray-700">Enable Global Notifications</span>
             </label>
           </div>
         </div>

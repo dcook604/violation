@@ -96,113 +96,41 @@ def generate_pdf_from_html(html_content, pdf_path):
         raise
 
 def send_email(subject, recipients, body, attachments=None, cc=None, html=None):
-    from .models import Settings
     from flask import current_app
-    import time
     
-    # Get settings from the database
-    settings = Settings.get_settings()
-    
-    # Log the intent to send an email with settings details
     current_app.logger.info(f"Preparing to send email: subject='{subject}', to={recipients}")
-    current_app.logger.info(f"SMTP Settings: server={settings.smtp_server}, port={settings.smtp_port}, user={settings.smtp_username}, TLS={settings.smtp_use_tls}")
+    current_app.logger.info(f"Using SMTP Settings from App Config: " +
+                          f"server={current_app.config.get('MAIL_SERVER')}, " +
+                          f"port={current_app.config.get('MAIL_PORT')}, " +
+                          f"user={current_app.config.get('MAIL_USERNAME')}, " +
+                          f"TLS={current_app.config.get('MAIL_USE_TLS')}, " +
+                          f"sender={current_app.config.get('MAIL_DEFAULT_SENDER')}")
     
     try:
-        # Only apply database settings if they're properly configured
-        if settings.smtp_server and settings.smtp_port and settings.smtp_username and settings.smtp_password:
-            from flask_mail import Mail, Message
-            import copy
-            
-            # Create a copy of the current app config
-            config = copy.deepcopy(current_app.config)
-            
-            # Override with settings from database
-            config['MAIL_SERVER'] = settings.smtp_server
-            config['MAIL_PORT'] = settings.smtp_port
-            config['MAIL_USERNAME'] = settings.smtp_username
-            config['MAIL_PASSWORD'] = settings.smtp_password
-            config['MAIL_USE_TLS'] = settings.smtp_use_tls
-            if settings.smtp_from_email:
-                config['MAIL_DEFAULT_SENDER'] = settings.smtp_from_name + ' <' + settings.smtp_from_email + '>' if settings.smtp_from_name else settings.smtp_from_email
-            
-            # Store original config values
-            original_server = current_app.config.get('MAIL_SERVER')
-            original_port = current_app.config.get('MAIL_PORT')
-            original_username = current_app.config.get('MAIL_USERNAME')
-            original_password = current_app.config.get('MAIL_PASSWORD')
-            original_tls = current_app.config.get('MAIL_USE_TLS')
-            original_sender = current_app.config.get('MAIL_DEFAULT_SENDER')
-            
-            # Set config to use database settings
-            current_app.config['MAIL_SERVER'] = config['MAIL_SERVER']
-            current_app.config['MAIL_PORT'] = config['MAIL_PORT']
-            current_app.config['MAIL_USERNAME'] = config['MAIL_USERNAME']
-            current_app.config['MAIL_PASSWORD'] = config['MAIL_PASSWORD']
-            current_app.config['MAIL_USE_TLS'] = config['MAIL_USE_TLS']
-            current_app.config['MAIL_DEFAULT_SENDER'] = config.get('MAIL_DEFAULT_SENDER', original_sender)
-            
-            # Debug logging - show what we're using (masking password)
-            current_app.logger.info(f"Using SMTP: {config['MAIL_SERVER']}:{config['MAIL_PORT']} " +
-                              f"with user={config['MAIL_USERNAME']}, " +
-                              f"TLS={config['MAIL_USE_TLS']}")
-            
-            try:
-                # Import mail from app
-                from . import mail
-                
-                # Test direct connection to SMTP server before sending
-                import socket
-                socket_test_start = time.time()
-                current_app.logger.info(f"Testing socket connection to {config['MAIL_SERVER']}:{config['MAIL_PORT']}...")
-                
-                try:
-                    sock = socket.create_connection((config['MAIL_SERVER'], config['MAIL_PORT']), timeout=10)
-                    sock.close()
-                    socket_test_time = time.time() - socket_test_start
-                    current_app.logger.info(f"Socket connection successful ({socket_test_time:.2f}s)")
-                except Exception as sock_err:
-                    current_app.logger.error(f"Socket connection failed: {str(sock_err)}")
-                    raise Exception(f"Cannot connect to SMTP server {config['MAIL_SERVER']}:{config['MAIL_PORT']}: {str(sock_err)}")
-                
-                # Create message with current settings
-                msg = Message(subject, recipients=recipients, cc=cc, body=body, html=html)
-                attachments = attachments or []
-                for att in attachments:
-                    with open(att, 'rb') as f:
-                        msg.attach(os.path.basename(att), 'application/pdf', f.read())
-                
-                # Send with mail instance from app context
-                mail.send(msg)
-                current_app.logger.info("Email sent successfully")
-            except Exception as e:
-                current_app.logger.error(f"Error sending email with custom SMTP settings: {str(e)}")
-                raise
-            finally:
-                # Restore original config
-                current_app.config['MAIL_SERVER'] = original_server
-                current_app.config['MAIL_PORT'] = original_port
-                current_app.config['MAIL_USERNAME'] = original_username
-                current_app.config['MAIL_PASSWORD'] = original_password
-                current_app.config['MAIL_USE_TLS'] = original_tls
-                current_app.config['MAIL_DEFAULT_SENDER'] = original_sender
-        else:
-            # Missing required settings
-            missing = []
-            if not settings.smtp_server:
-                missing.append("SMTP Server")
-            if not settings.smtp_port:
-                missing.append("SMTP Port")
-            if not settings.smtp_username:
-                missing.append("SMTP Username")
-            if not settings.smtp_password:
-                missing.append("SMTP Password")
-            
-            missing_str = ", ".join(missing)
-            error_msg = f"Missing required SMTP settings: {missing_str}"
+        # Check if essential config is missing (optional, but good practice)
+        if not all([current_app.config.get('MAIL_SERVER'), 
+                    current_app.config.get('MAIL_PORT'), 
+                    current_app.config.get('MAIL_USERNAME'), 
+                    current_app.config.get('MAIL_PASSWORD')]):
+            error_msg = "Missing essential SMTP configuration in environment variables (MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD)"
             current_app.logger.error(error_msg)
-            raise Exception(error_msg)
+            raise ValueError(error_msg)
+            
+        # Create message using configured default sender
+        msg = Message(subject, recipients=recipients, cc=cc, body=body, html=html)
+        
+        # Handle attachments
+        attachments = attachments or []
+        for att in attachments:
+            with open(att, 'rb') as f:
+                msg.attach(os.path.basename(att), 'application/pdf', f.read())
+        
+        # Send using the mail instance initialized with app config
+        mail.send(msg)
+        current_app.logger.info("Email sent successfully")
+
     except Exception as e:
-        current_app.logger.error(f"Email sending failed: {str(e)}")
+        current_app.logger.error(f"Email sending failed: {str(e)}", exc_info=True)
         # Re-raise the exception so it can be handled by the caller
         raise
 

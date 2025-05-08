@@ -165,9 +165,9 @@ The `updated_by` foreign key uses `ON DELETE SET NULL` to ensure that if a user 
 - **Frontend URL Construction:** Generating the correct absolute URL for the reset link (pointing to the frontend) can be tricky. The current implementation in `auth_routes.py` tries to guess based on the request origin or `BASE_URL` config, but this might need refinement depending on the deployment setup (e.g., different ports, reverse proxies).
 
 ### Email Delivery
-- **SMTP Configuration:** Email sending relies entirely on the SMTP settings configured in the `Settings` page/database. If these are incorrect or missing, password reset emails will fail silently (though errors are logged).
+- **SMTP Configuration:** Email sending now relies *exclusively* on environment variables (`MAIL_*`). If these are incorrect or missing, password reset emails and other system emails will fail. Check `.env.example` for required variables. The frontend Settings page no longer allows configuring SMTP.
 - **Spam Filters:** Emails containing links, especially password reset links, can sometimes be flagged as spam. Ensure the HTML template is well-formed and consider implementing SPF/DKIM records for the sending domain to improve deliverability.
-- **Error Handling:** The `send_password_reset_email` function includes basic error logging but doesn't currently retry or explicitly notify the user/admin of failures beyond the log message.
+- **Error Handling:** The `send_password_reset_email` and `send_email` functions include basic error logging but don't currently retry or explicitly notify the user/admin of failures beyond the log message.
 
 ### Session Invalidation
 - **Critical Step:** Terminating all other active sessions (`user.terminate_all_sessions()`) after a successful password reset is a crucial security measure to log out potentially compromised sessions.
@@ -257,3 +257,4 @@ The `updated_by` foreign key uses `ON DELETE SET NULL` to ensure that if a user 
     *   User activity (mouse, keyboard, touch) resets the idle timer.
     *   This complements backend session timeouts but provides more immediate UI feedback regarding inactivity.
     *   Ensure the modal styling (`IdleWarningModal` in `AuthContext.js`) is consistent with the application theme if customized later. 
+*   **SMTP Configuration via `.env`**: SMTP settings are now solely configured via environment variables (e.g., in a `.env` file for development). The UI for managing these settings has been removed. Ensure all required `MAIL_*` variables are set in the environment, otherwise email sending will fail. Refer to `.env.example` for details. 
